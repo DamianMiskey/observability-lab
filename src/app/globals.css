@@ -10,7 +10,7 @@
   --fg: #1d1d1b;
   --muted: #64625d;
   --accent: #b45309; /* white text on it 5.0:1 */
-  --accent-ink: #b45309;
+  --accent-ink: #92400e; /* amber text: darker, to clear 4.5:1 on the code background too */
   --code: #f1f0ec;
   --danger: #c0362c;
   color-scheme: light;
