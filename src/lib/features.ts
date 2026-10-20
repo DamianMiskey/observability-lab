@@ -13,9 +13,9 @@ export type Feature = {
 };
 
 export const features: Feature[] = [
-  { slug: "logs", name: "Structured logs", category: "Logs", phase: 1, ready: false,
+  { slug: "logs", name: "Structured logs", category: "Logs", phase: 1, ready: true,
     summary: "One JSON line per request, searchable by any field." },
-  { slug: "request-ids", name: "Request IDs", category: "Logs", phase: 1, ready: false,
+  { slug: "request-ids", name: "Request IDs", category: "Logs", phase: 1, ready: true,
     summary: "One id that follows a request across services and platforms." },
 
   { slug: "traces", name: "Distributed tracing", category: "Traces", phase: 2, ready: false,
