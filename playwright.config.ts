@@ -25,7 +25,7 @@ export default defineConfig({
   grepInvert: LIVE ? undefined : /@deployed/,
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"], channel } },
-    { name: "mobile", use: { ...devices["Pixel 7"], channel }, testMatch: /pages\.spec/ },
+    { name: "mobile", use: { ...devices["Pixel 7"], channel }, testMatch: /(pages|telemetry)\.spec/ },
   ],
   webServer: LIVE ? undefined : { command: "npm start -- -p 3400", url: BASE_URL, reuseExistingServer: !CI, timeout: 60_000 },
 });

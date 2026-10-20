@@ -28,7 +28,7 @@ export function AskTheLogs() {
 
   const fmt = (v: number) => (Number.isInteger(v) ? v.toLocaleString("en") : v.toFixed(1));
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
       <div className="flex flex-wrap gap-2">
         {(Object.keys(QUERIES) as QueryId[]).map((id) => (
           <Button key={id} variant={id === q ? "primary" : "ghost"} aria-pressed={id === q} onClick={() => ask(id)} disabled={state === "busy"}>
@@ -37,22 +37,24 @@ export function AskTheLogs() {
         ))}
       </div>
       {q && (
-        <div aria-live="polite" className="grid gap-2">
+        <div aria-live="polite" className="grid grid-cols-[minmax(0,1fr)] gap-2">
           <pre className="m-0 overflow-x-auto rounded-lg bg-code px-3 py-2 font-mono text-xs" tabIndex={0}>{QUERIES[q].logql}</pre>
           {state === "busy" && <p className="m-0 text-sm text-muted">Asking Loki…</p>}
           {state === "notConfigured" && <NotConfigured />}
           {state !== "busy" && state !== "idle" && state !== "notConfigured" && <p className="m-0 text-sm text-danger">{state}</p>}
           {rows && (rows.length === 0 ? <p className="m-0 text-sm text-muted">No matching lines in the last hour.</p> : (
+            <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full border-collapse text-sm" data-testid="answer">
               <tbody>
                 {rows.map((r, i) => (
                   <tr key={i} className="border-b border-line">
-                    <td className="py-1 pr-3 font-mono text-xs">{Object.entries(r.labels).map(([k, v]) => `${k}=${v}`).join(", ") || "(all)"}</td>
-                    <td className="py-1 text-right font-mono tabular-nums">{fmt(r.value)} {QUERIES[q].unit}</td>
+                    <td className="py-1 pr-3 font-mono text-xs break-all">{Object.entries(r.labels).map(([k, v]) => `${k}=${v}`).join(", ") || "(all)"}</td>
+                    <td className="py-1 text-right font-mono whitespace-nowrap tabular-nums">{fmt(r.value)} {QUERIES[q].unit}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           ))}
         </div>
       )}

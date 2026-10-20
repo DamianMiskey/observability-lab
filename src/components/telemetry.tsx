@@ -61,7 +61,7 @@ export function Choice<T extends string>({ label, options, value, onChange }: { 
   return (
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label={label}>
       {options.map(([id, name]) => (
-        <Button key={id} variant={id === value ? "primary" : "ghost"} aria-pressed={id === value} onClick={() => onChange(id)}>{name}</Button>
+        <Button key={id} variant={id === value ? "primary" : "ghost"} aria-pressed={id === value} onClick={() => onChange(id)} className="max-w-full [overflow-wrap:anywhere]">{name}</Button>
       ))}
     </div>
   );

@@ -30,9 +30,9 @@ export function AcrossPlatforms() {
 
   const bodyId = (body: string) => { try { return JSON.parse(body).requestId as string; } catch { return null; } };
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
       <div><Button onClick={go} disabled={busy}>{busy ? "Working…" : "One id, two platforms"}</Button></div>
-      <div aria-live="polite" className="grid gap-3">
+      <div aria-live="polite" className="grid grid-cols-[minmax(0,1fr)] gap-3">
         {sent && (
           <>
             <p className="m-0 font-mono text-sm break-all">traceparent: 00-<strong className="text-accent-ink">{sent.traceId}</strong>-…-01</p>
