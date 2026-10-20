@@ -33,15 +33,15 @@ export function FindMyLine() {
   const result = sent?.results[0];
   const line = found?.lines.find((l) => l.line.msg === "request");
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
       <Choice label="Request" options={Object.entries(REQUESTS).map(([id, r]) => [id as RequestId, r.label] as const)} value={which} onChange={setWhich} />
       <Choice label="Platform" options={Object.entries(PLATFORMS).map(([id, p]) => [id as PlatformId, p.name] as const)} value={platform} onChange={setPlatform} />
       <p className="m-0 text-sm text-muted">{REQUESTS[which].note}</p>
       <div><Button onClick={go} disabled={busy}>{busy ? "Working…" : "Send it, then find its log line"}</Button></div>
 
-      <div aria-live="polite" className="grid gap-3">
+      <div aria-live="polite" className="grid grid-cols-[minmax(0,1fr)] gap-3">
         {result && (
-          <p className="m-0 font-mono text-sm" data-testid="sent">
+          <p className="m-0 font-mono text-sm break-all" data-testid="sent">
             {result.status} in {result.ms} ms · X-Request-Id: <span className="break-all">{result.requestId}</span>
           </p>
         )}

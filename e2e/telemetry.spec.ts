@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { overflow } from "./helpers";
 
 // Pages that send a real (read-only) request to the API lab, then look for its
 // log line in Grafana. Without a read token (local, CI) they must say so
@@ -12,6 +13,8 @@ test("logs: the request is sent and its id shown @readonly", async ({ page }) =>
   await page.getByRole("button", { name: "Send it, then find its log line" }).click();
   await expect(page.getByTestId("sent")).toContainText(/200 in \d+ ms · X-Request-Id: [0-9a-f]{32}/, { timeout: 20_000 });
   if (!LIVE) await expect(page.getByText("Reading from Grafana isn't set up")).toBeVisible();
+  // Results (long ids, JSON) must wrap or scroll in their box, not widen the page.
+  expect(await overflow(page)).toBeLessThanOrEqual(0);
 });
 
 test("request ids: one id comes back from both platforms @readonly", async ({ page }) => {
@@ -20,6 +23,8 @@ test("request ids: one id comes back from both platforms @readonly", async ({ pa
   for (const p of ["vercel", "workers"]) {
     await expect(page.locator(`[data-platform="${p}"]`).getByTestId("same-id")).toContainText("both carry the trace id", { timeout: 20_000 });
   }
+  // Results (long ids, JSON) must wrap or scroll in their box, not widen the page.
+  expect(await overflow(page)).toBeLessThanOrEqual(0);
 });
 
 test("on the live site, the line comes back from Loki @deployed", async ({ page }) => {
@@ -28,4 +33,6 @@ test("on the live site, the line comes back from Loki @deployed", async ({ page 
   await page.getByRole("button", { name: "Send it, then find its log line" }).click();
   await expect(page.getByTestId("found")).toContainText('"msg": "request"', { timeout: 60_000 });
   await expect(page.getByTestId("found")).toContainText('"route": "/api/scores"');
+  // Results (long ids, JSON) must wrap or scroll in their box, not widen the page.
+  expect(await overflow(page)).toBeLessThanOrEqual(0);
 });
