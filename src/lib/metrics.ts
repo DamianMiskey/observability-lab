@@ -24,5 +24,5 @@ export const P95_OVER_TIME = {
   stepSec: 300,
 };
 
-/** Every label set of the call counter: to check what the generator produces. */
-export const DISCOVER = "traces_spanmetrics_calls_total";
+/** What the generator produces: its metric names, and full label sets of request spans. */
+export const DISCOVER = { names: "traces_spanmetrics_.*", requests: `traces_spanmetrics_calls_total{${SERVER}}` };

@@ -1,4 +1,4 @@
-import { NotConfigured, promInstant, promRange, promSeries } from "@/lib/grafana";
+import { NotConfigured, promInstant, promNames, promRange, promSeries } from "@/lib/grafana";
 import { DISCOVER, P95_OVER_TIME, RED } from "@/lib/metrics";
 
 export type RedRow = { route: string; platform: string; calls: number; errors: number; clientErrors: number; p95Ms: number | null };
@@ -28,10 +28,10 @@ export async function GET(request: Request) {
       return Response.json({ series, query: P95_OVER_TIME.query }, { headers: { "cache-control": "no-store" } });
     }
     if (q === "discover") {
-      const sets = await promSeries(DISCOVER);
-      const labels: Record<string, string[]> = {};
-      for (const set of sets) for (const [k, v] of Object.entries(set)) labels[k] = [...new Set([...(labels[k] ?? []), v])].slice(0, 30);
-      return Response.json({ series: sets.length, labels }, { headers: { "cache-control": "no-store" } });
+      const [names, sets] = await Promise.all([promNames(DISCOVER.names), promSeries(DISCOVER.requests)]);
+      // Full label sets (not values per label), a few per platform/kind combination.
+      const examples = sets.filter((set, i) => sets.findIndex((o) => o.cloud_platform === set.cloud_platform && o.job === set.job) === i || i < 3).slice(0, 8);
+      return Response.json({ names, requestSeries: sets.length, examples }, { headers: { "cache-control": "no-store" } });
     }
     return Response.json({ error: "q must be red, p95 or discover" }, { status: 400 });
   } catch (e) {

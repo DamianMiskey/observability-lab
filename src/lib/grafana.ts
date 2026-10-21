@@ -165,3 +165,13 @@ export async function promSeries(selector: string) {
   if (!res.ok) throw new Error(`Prometheus answered ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return ((await res.json()) as { data: Record<string, string>[] }).data;
 }
+
+/** Metric names matching a pattern (e.g. every traces_spanmetrics_* metric). */
+export async function promNames(pattern: string) {
+  const end = Math.floor(Date.now() / 1000);
+  const res = await fetch(`${PROM.url}/api/v1/label/__name__/values?${new URLSearchParams({ "match[]": `{__name__=~"${pattern}"}`, start: String(end - 3600), end: String(end) })}`, {
+    headers: { authorization: auth(PROM.user) }, signal: AbortSignal.timeout(10_000), cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Prometheus answered ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return ((await res.json()) as { data: string[] }).data;
+}
