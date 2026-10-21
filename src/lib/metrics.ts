@@ -8,7 +8,9 @@
 //
 // These are fixed queries: visitors choose one, they can't send their own.
 
-export const SERVER = 'span_kind="SPAN_KIND_SERVER"';
+// Request spans that carry a region: series from before the region dimension
+// was switched on have none, so no platform can be derived for them.
+export const SERVER = 'span_kind="SPAN_KIND_SERVER", cloud_region!=""';
 const WINDOW = "1h";
 
 /**
@@ -36,6 +38,14 @@ export const P95_OVER_TIME = {
 /** What the generator produces: its metric names, and full label sets of request spans. */
 export const DISCOVER = { names: "traces_spanmetrics_.*", requests: `traces_spanmetrics_calls_total{${SERVER}}` };
 
+/**
+ * Errors as a share of requests. With no errors at all there's no error series
+ * to divide, so the query would return nothing: "or" falls back to the request
+ * series times zero, giving a real 0% (a flat line, not "No data").
+ */
+export const errorShare = (window: string, by: string, which: "errors" | "clientErrors" = "errors") =>
+  `(${red(window, by)[which]} or ${red(window, by).rate} * 0) / ${red(window, by).rate}`;
+
 /** The same RED queries for any window and grouping (the Grafana dashboard uses $__rate_interval). */
 export const red = (window: string, by: string) => ({
   rate: `sum by (${by}) (${withPlatform(`rate(traces_spanmetrics_calls_total{${SERVER}}[${window}])`)})`,
@@ -53,7 +63,7 @@ export const ALERT = {
   threshold: 0.05,
   minRequests: 10,
   window: "10m",
-  get errorShare() { return red(this.window, "platform").errors + " / " + red(this.window, "platform").rate; },
+  get errorShare() { return errorShare(this.window, "platform"); },
   get volume() { return `sum by (platform) (${withPlatform(`increase(traces_spanmetrics_calls_total{${SERVER}}[${this.window}])`)})`; },
   /** What goes into Grafana: a series per platform while it's firing, nothing otherwise. */
   get rule() { return `(${this.errorShare}) > ${this.threshold} and (${this.volume}) >= ${this.minRequests}`; },

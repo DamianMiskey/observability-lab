@@ -30,7 +30,8 @@ export async function GET(request: Request) {
     if (q === "alert") {
       // The alert's two halves, per platform: the error share and the volume.
       const [share, volume] = await Promise.all([promInstant(ALERT.errorShare), promInstant(ALERT.volume)]);
-      const platforms = [...new Set(volume.map((v) => v.labels.platform ?? "unknown"))];
+      // Platforms with requests in the window (an idle one has nothing to judge).
+      const platforms = [...new Set(volume.filter((v) => v.value > 0 && v.labels.platform).map((v) => v.labels.platform))];
       const rows = platforms.map((p) => {
         const requests = Math.round(volume.find((v) => v.labels.platform === p)?.value ?? 0);
         const s = share.find((v) => v.labels.platform === p)?.value;

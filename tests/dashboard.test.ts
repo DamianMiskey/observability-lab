@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GET } from "@/app/grafana/api-feature-lab-dashboard.json/route";
 import { buildDashboard } from "@/lib/dashboard";
-import { ALERT } from "@/lib/metrics";
+import { ALERT, errorShare, SERVER } from "@/lib/metrics";
 
 // The generated Grafana dashboard: valid shape, no overlaps, real metric names.
 describe("Grafana dashboard", () => {
@@ -34,6 +34,24 @@ describe("Grafana dashboard", () => {
     const res = GET();
     expect(res.headers.get("content-type")).toContain("application/json");
     expect((await res.json()).uid).toBe("api-feature-lab-red");
+  });
+});
+
+describe("dashboard details", () => {
+  it("error shares fall back to 0% rather than No data when there are no errors", () => {
+    const share = errorShare("5m", "platform");
+    expect(share).toMatch(/\) or .* \* 0\) \/ /);
+  });
+
+  it("only counts series with a region, so no platform-less 'Value' line appears", () => {
+    expect(SERVER).toContain('cloud_region!=""');
+  });
+
+  it("the endpoint table hides the instant query's timestamp and names its columns", () => {
+    const table = (buildDashboard().panels as { type: string; transformations?: { id: string; options: { excludeByName: Record<string, boolean>; renameByName: Record<string, string> } }[] }[]).find((p) => p.type === "table")!;
+    const organize = table.transformations!.find((t) => t.id === "organize")!;
+    expect(organize.options.excludeByName.Time).toBe(true);
+    expect(organize.options.renameByName).toMatchObject({ span_name: "Endpoint", platform: "Platform", Value: "p95" });
   });
 });
 
