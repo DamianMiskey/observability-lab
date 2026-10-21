@@ -73,11 +73,13 @@ export function Waterfall({ spans }: { spans: TraceSpan[] }) {
           </li>
         ))}
       </ol>
-      <p className="m-0 flex flex-wrap gap-3 text-xs text-muted">
-        <span><span className="mr-1 inline-block h-2 w-3 rounded-sm bg-accent" />request (server)</span>
-        <span><span className="mr-1 inline-block h-2 w-3 rounded-sm bg-sky-600" />database / outgoing (client)</span>
-        <span><span className="mr-1 inline-block h-2 w-3 rounded-sm bg-violet-600" />step inside the API</span>
-        <span><span className="mr-1 inline-block h-2 w-3 rounded-sm bg-danger" />failed</span>
+      {/* A key, not a status: each entry says what a colour means. */}
+      <p className="m-0 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+        <span className="font-semibold">Colours:</span>
+        <span><span className="mr-1 inline-block h-2 w-3 rounded-sm bg-accent" />the request (server);</span>
+        <span><span className="mr-1 inline-block h-2 w-3 rounded-sm bg-sky-600" />a query or outgoing call (client);</span>
+        <span><span className="mr-1 inline-block h-2 w-3 rounded-sm bg-violet-600" />a step inside the API;</span>
+        <span><span className="mr-1 inline-block h-2 w-3 rounded-sm bg-danger" />red: a span that failed</span>
       </p>
     </div>
   );
