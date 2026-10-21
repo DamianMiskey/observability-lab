@@ -8,7 +8,7 @@
 //
 // These are fixed queries: visitors choose one, they can't send their own.
 
-const SERVER = 'span_kind="SPAN_KIND_SERVER"';
+export const SERVER = 'span_kind="SPAN_KIND_SERVER"';
 const WINDOW = "1h";
 
 /**
@@ -16,7 +16,7 @@ const WINDOW = "1h";
  * only exists on series created after that dimension was switched on): Vercel
  * names regions like "iad1", Cloudflare uses airport codes like "JNB".
  */
-const withPlatform = (expr: string) =>
+export const withPlatform = (expr: string) =>
   `label_replace(label_replace(${expr}, "platform", "vercel", "cloud_region", "[a-z]+[0-9]+"), "platform", "cloudflare-workers", "cloud_region", "[A-Z]+")`;
 
 export const RED = {
@@ -35,3 +35,26 @@ export const P95_OVER_TIME = {
 
 /** What the generator produces: its metric names, and full label sets of request spans. */
 export const DISCOVER = { names: "traces_spanmetrics_.*", requests: `traces_spanmetrics_calls_total{${SERVER}}` };
+
+/** The same RED queries for any window and grouping (the Grafana dashboard uses $__rate_interval). */
+export const red = (window: string, by: string) => ({
+  rate: `sum by (${by}) (${withPlatform(`rate(traces_spanmetrics_calls_total{${SERVER}}[${window}])`)})`,
+  errors: `sum by (${by}) (${withPlatform(`rate(traces_spanmetrics_calls_total{${SERVER}, status_code="STATUS_CODE_ERROR"}[${window}])`)})`,
+  clientErrors: `sum by (${by}) (${withPlatform(`rate(traces_spanmetrics_calls_total{${SERVER}, http_response_status_code=~"4.."}[${window}])`)})`,
+  p95: `histogram_quantile(0.95, sum by (${by}) (${withPlatform(`rate(traces_spanmetrics_latency{${SERVER}}[${window}])`)}))`,
+});
+
+/**
+ * The alert: more than 5% of requests answered with a 5xx over ten minutes, on
+ * at least ten requests (so one failure at 3 a.m. doesn't page anyone).
+ * The same expression goes into the Grafana alert rule.
+ */
+export const ALERT = {
+  threshold: 0.05,
+  minRequests: 10,
+  window: "10m",
+  get errorShare() { return red(this.window, "platform").errors + " / " + red(this.window, "platform").rate; },
+  get volume() { return `sum by (platform) (${withPlatform(`increase(traces_spanmetrics_calls_total{${SERVER}}[${this.window}])`)})`; },
+  /** What goes into Grafana: a series per platform while it's firing, nothing otherwise. */
+  get rule() { return `(${this.errorShare}) > ${this.threshold} and (${this.volume}) >= ${this.minRequests}`; },
+};

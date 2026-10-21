@@ -1,5 +1,5 @@
 import { NotConfigured, promInstant, promNames, promRange, promSeries } from "@/lib/grafana";
-import { DISCOVER, P95_OVER_TIME, RED } from "@/lib/metrics";
+import { ALERT, DISCOVER, P95_OVER_TIME, RED } from "@/lib/metrics";
 
 export type RedRow = { route: string; platform: string; calls: number; errors: number; clientErrors: number; p95Ms: number | null };
 
@@ -27,13 +27,25 @@ export async function GET(request: Request) {
         .map((s) => ({ platform: s.labels.platform ?? "unknown", points: s.points.filter(([, v]) => Number.isFinite(v)).map(([t, v]) => [t, Math.round(v * 1000)]) }));
       return Response.json({ series, query: P95_OVER_TIME.query }, { headers: { "cache-control": "no-store" } });
     }
+    if (q === "alert") {
+      // The alert's two halves, per platform: the error share and the volume.
+      const [share, volume] = await Promise.all([promInstant(ALERT.errorShare), promInstant(ALERT.volume)]);
+      const platforms = [...new Set(volume.map((v) => v.labels.platform ?? "unknown"))];
+      const rows = platforms.map((p) => {
+        const requests = Math.round(volume.find((v) => v.labels.platform === p)?.value ?? 0);
+        const s = share.find((v) => v.labels.platform === p)?.value;
+        const errorShare = s !== undefined && Number.isFinite(s) ? s : 0;
+        return { platform: p, requests, errorShare, firing: errorShare > ALERT.threshold && requests >= ALERT.minRequests };
+      });
+      return Response.json({ rows, rule: ALERT.rule, threshold: ALERT.threshold, minRequests: ALERT.minRequests, window: ALERT.window }, { headers: { "cache-control": "no-store" } });
+    }
     if (q === "discover") {
       const [names, sets] = await Promise.all([promNames(DISCOVER.names), promSeries(DISCOVER.requests)]);
       // Full label sets (not values per label), a few per platform/kind combination.
       const examples = sets.filter((set, i) => sets.findIndex((o) => o.cloud_platform === set.cloud_platform && o.job === set.job) === i || i < 3).slice(0, 8);
       return Response.json({ names, requestSeries: sets.length, examples }, { headers: { "cache-control": "no-store" } });
     }
-    return Response.json({ error: "q must be red, p95 or discover" }, { status: 400 });
+    return Response.json({ error: "q must be red, p95, alert or discover" }, { status: 400 });
   } catch (e) {
     if (e instanceof NotConfigured) return Response.json({ error: e.message, notConfigured: true }, { status: 503 });
     return Response.json({ error: (e as Error).message }, { status: 502 });
