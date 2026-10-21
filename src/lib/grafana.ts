@@ -6,6 +6,7 @@
 
 const LOKI = { url: "https://logs-prod-042.grafana.net", user: "1842184" };
 const TEMPO = { url: "https://tempo-prod-30-prod-us-east-3.grafana.net/tempo", user: "1836485" };
+const PROM = { url: "https://prometheus-prod-66-prod-us-east-3.grafana.net/api/prom", user: "3693039" };
 
 export class NotConfigured extends Error {
   constructor() { super("Grafana isn't configured here (no GRAFANA_READ_TOKEN)."); }
@@ -127,4 +128,40 @@ export async function getTrace(traceId: string): Promise<TraceSpan[] | null> {
   const body = (await res.json()) as { trace?: OtlpTrace } & OtlpTrace;
   const spans = flattenTrace(body.trace ?? body);
   return spans.length ? spans : null;
+}
+
+// ---- Metrics (Prometheus API, Grafana Mimir) --------------------------------
+
+type PromResult = { metric: Record<string, string>; value?: [number, string]; values?: [number, string][] };
+
+async function prom(path: string, params: Record<string, string>): Promise<PromResult[]> {
+  const res = await fetch(`${PROM.url}/api/v1/${path}?${new URLSearchParams(params)}`, {
+    headers: { authorization: auth(PROM.user) },
+    signal: AbortSignal.timeout(10_000),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Prometheus answered ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return ((await res.json()) as { data: { result: PromResult[] } }).data.result;
+}
+
+/** A PromQL query evaluated now: one number per series. */
+export async function promInstant(query: string) {
+  return (await prom("query", { query })).map((r) => ({ labels: r.metric, value: Number(r.value?.[1] ?? NaN) }));
+}
+
+/** A PromQL query over the last `hours`, one point per `stepSec`. */
+export async function promRange(query: string, hours: number, stepSec: number) {
+  const end = Math.floor(Date.now() / 1000);
+  return (await prom("query_range", { query, start: String(end - hours * 3600), end: String(end), step: String(stepSec) }))
+    .map((r) => ({ labels: r.metric, points: (r.values ?? []).map(([t, v]) => [t * 1000, Number(v)] as [number, number]) }));
+}
+
+/** The label sets of the series a selector matches in the last hour (to see what exists). */
+export async function promSeries(selector: string) {
+  const end = Math.floor(Date.now() / 1000);
+  const res = await fetch(`${PROM.url}/api/v1/series?${new URLSearchParams({ "match[]": selector, start: String(end - 3600), end: String(end) })}`, {
+    headers: { authorization: auth(PROM.user) }, signal: AbortSignal.timeout(10_000), cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Prometheus answered ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return ((await res.json()) as { data: Record<string, string>[] }).data;
 }

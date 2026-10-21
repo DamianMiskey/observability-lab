@@ -37,10 +37,12 @@ CI (`.github/workflows/ci.yml`) runs all of them on every pull request, with no 
 
 - **Traces** (`/traces`): `/api/trace?id=` reads one trace from Tempo's `/api/v2/traces/<id>` and flattens it (hex or base64 ids, numeric or named kinds and statuses, times relative to the trace's start; `flattenTrace` in `src/lib/grafana.ts`); `Waterfall.tsx` draws it depth-first. The demo sends the request from this site's server or, for the leaderboard (the one endpoint whose CORS allows this site, `traceparent` and `X-Request-Id`), from the visitor's browser, so a far-away visitor sees the Worker's database queries cross the ocean. CSP `connect-src` allows both API origins for that.
 
+- **Metrics** (`/metrics`): RED metrics come from Grafana's traces **metrics generation** (activated in the Grafana UI, no extra cost on Free): Tempo turns every span into `traces_spanmetrics_calls_total` and the `traces_spanmetrics_latency` histogram, labelled `span_name`, `span_kind`, `status_code`, plus the dimensions turned on: `cloud_platform`, `cloud_region`, `http_response_status_code`. That fits serverless, where in-process counters reported every minute don't work (Grafana's OTLP gateway's handling of per-request delta metrics is undocumented; the documented converter runs in an agent we don't have). `/api/metrics?q=red|p95|discover` runs fixed PromQL against Mimir (`src/lib/metrics.ts`); `discover` lists the label sets the generator produces. The p95 chart is plain SVG: series colours from the dataviz reference palette's first two slots (validated pair, light and dark tokens), colour fixed per platform, 2px lines, legend plus end labels, crosshair + readout on hover or tap, the RED table as its table view.
+
 ## Roadmap
 
 - [x] **Phase 1: Logs.** Structured JSON log lines and request ids (in the API lab), shipped to Grafana Loki over OTLP; pages that send a request and find its line, ask the logs LogQL questions, and follow one id across both platforms
 - [x] **Phase 2: Traces.** Spans for requests, middleware steps, every database query and webhook deliveries, on Vercel and Workers (a small tracer in the API lab), in Grafana Tempo; a page that sends a request from the server or your browser and draws its trace as a waterfall
-- [ ] **Phase 3: Metrics.** Rate, errors and duration per endpoint, a dashboard, and an error-rate alert
+- [ ] **Phase 3: Metrics.** Rate, errors and duration per endpoint (done: generated from traces, `/metrics`), a dashboard, and an error-rate alert
 - [ ] **Phase 4: The browser.** Web vitals and front-end errors from real visitors (Grafana Faro)
 - [ ] **Phase 5: From outside.** Synthetic checks of the live API on a schedule, plus the Playwright suites as traffic
