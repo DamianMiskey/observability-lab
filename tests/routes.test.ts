@@ -49,3 +49,12 @@ describe("queries", () => {
     for (const q of Object.values(QUERIES)) expect(q.logql).toContain('{service_name="api-feature-lab"} | json');
   });
 });
+
+describe("/api/metrics", () => {
+  it("runs only its fixed queries, and says when Grafana isn't configured", async () => {
+    const { GET: metrics } = await import("@/app/api/metrics/route");
+    expect((await metrics(new Request("http://x/api/metrics?q=up"))).status).toBe(400);
+    delete process.env.GRAFANA_READ_TOKEN;
+    for (const q of ["red", "p95", "discover"]) expect((await metrics(new Request(`http://x/api/metrics?q=${q}`))).status).toBe(503);
+  });
+});

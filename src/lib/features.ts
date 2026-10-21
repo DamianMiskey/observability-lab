@@ -21,7 +21,7 @@ export const features: Feature[] = [
   { slug: "traces", name: "Distributed tracing", category: "Traces", phase: 2, ready: true,
     summary: "Where the time goes: every step of a request as a span." },
 
-  { slug: "metrics", name: "RED metrics", category: "Metrics", phase: 3, ready: false,
+  { slug: "metrics", name: "RED metrics", category: "Metrics", phase: 3, ready: true,
     summary: "Rate, errors and duration for every endpoint." },
   { slug: "alerts", name: "Dashboards & alerts", category: "Metrics", phase: 3, ready: false,
     summary: "Seeing trouble at a glance, and being told about it." },

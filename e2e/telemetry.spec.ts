@@ -56,3 +56,19 @@ test("on the live site, the trace comes back from Tempo and is drawn @deployed",
   await expect(trace).toContainText("SELECT scores");
   expect(await overflow(page)).toBeLessThanOrEqual(0);
 });
+
+test("metrics: without Grafana the page says so @readonly", async ({ page }) => {
+  test.skip(LIVE, "Live, the next test reads real metrics");
+  await page.goto("/metrics");
+  await page.getByRole("button", { name: "Show the last hour" }).click();
+  await expect(page.getByText("Reading from Grafana isn't set up")).toBeVisible();
+});
+
+test("on the live site, the RED table and the p95 chart show real metrics @deployed", async ({ page }) => {
+  await page.goto("/metrics");
+  await page.getByRole("button", { name: "Show the last hour" }).click();
+  await expect(page.getByTestId("red")).toContainText("GET /api/scores", { timeout: 20_000 });
+  await page.getByRole("button", { name: "Show the last six hours" }).click();
+  await expect(page.getByTestId("p95-chart")).toBeVisible({ timeout: 20_000 });
+  expect(await overflow(page)).toBeLessThanOrEqual(0);
+});
