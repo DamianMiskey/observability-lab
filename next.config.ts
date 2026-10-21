@@ -12,7 +12,8 @@ const policy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",
-  "connect-src 'self'",
+  // The Traces page calls the API lab's leaderboard from the visitor's browser.
+  "connect-src 'self' https://api.djmiskey.com https://api-cf.djmiskey.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

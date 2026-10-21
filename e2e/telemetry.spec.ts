@@ -36,3 +36,23 @@ test("on the live site, the line comes back from Loki @deployed", async ({ page 
   // Results (long ids, JSON) must wrap or scroll in their box, not widen the page.
   expect(await overflow(page)).toBeLessThanOrEqual(0);
 });
+
+test("traces: a request from the browser carries our traceparent @readonly", async ({ page }) => {
+  await page.goto("/traces");
+  await page.getByRole("button", { name: "Send it, then draw its trace" }).click();
+  await expect(page.getByTestId("sent")).toContainText(/200 in \d+ ms .* trace [0-9a-f]{32}/, { timeout: 20_000 });
+  if (!LIVE) await expect(page.getByText("Reading from Grafana isn't set up")).toBeVisible();
+  expect(await overflow(page)).toBeLessThanOrEqual(0);
+});
+
+test("on the live site, the trace comes back from Tempo and is drawn @deployed", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/traces");
+  await page.getByRole("button", { name: "This site's server (Washington, D.C.)" }).click();
+  await page.getByRole("button", { name: "Send it, then draw its trace" }).click();
+  const trace = page.getByTestId("trace");
+  await expect(trace).toBeVisible({ timeout: 90_000 });
+  await expect(trace).toContainText("GET /api/scores");
+  await expect(trace).toContainText("SELECT scores");
+  expect(await overflow(page)).toBeLessThanOrEqual(0);
+});
