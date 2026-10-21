@@ -1,4 +1,4 @@
-import { red } from "./metrics";
+import { errorShare, red } from "./metrics";
 
 // The API lab's dashboard, as Grafana dashboard JSON, built from the same
 // PromQL the Metrics page runs (src/lib/metrics.ts), so the two can't drift.
@@ -16,10 +16,10 @@ const platformColours = Object.entries(PLATFORM_COLOURS).map(([name, colour]) =>
 }));
 
 type Target = { expr: string; legend?: string; instant?: boolean; format?: string };
-type Panel = { title: string; description?: string; type?: string; unit?: string; targets: Target[]; w?: number; h?: number; byPlatform?: boolean; options?: object };
+type Panel = { title: string; description?: string; type?: string; unit?: string; targets: Target[]; w?: number; h?: number; byPlatform?: boolean; options?: object; transformations?: object[] };
 
 let id = 0;
-function panel({ title, description, type = "timeseries", unit, targets, w = 12, h = 8, byPlatform = false, options }: Panel, x: number, y: number) {
+function panel({ title, description, type = "timeseries", unit, targets, w = 12, h = 8, byPlatform = false, options, transformations = [] }: Panel, x: number, y: number) {
   return {
     id: ++id, title, description, type,
     gridPos: { x, y, w, h },
@@ -29,6 +29,7 @@ function panel({ title, description, type = "timeseries", unit, targets, w = 12,
       overrides: byPlatform ? platformColours : [],
     },
     options: { legend: { displayMode: "list", placement: "bottom" }, tooltip: { mode: "multi" }, ...options },
+    transformations,
     targets: targets.map((t, i) => ({
       refId: String.fromCharCode(65 + i), datasource: PROM, expr: t.expr,
       legendFormat: t.legend ?? "__auto", instant: t.instant ?? false, range: !t.instant, format: t.format ?? "time_series",
@@ -66,8 +67,8 @@ export function buildDashboard() {
       row("Per platform", 0),
       panel({ title: "Requests per second", unit: "reqps", byPlatform: true, targets: [{ expr: byPlatform.rate, legend: "{{platform}}" }] }, 0, 1),
       panel({ title: "p95 response time", unit: "s", byPlatform: true, description: "95% of requests were faster than this. Workers far from the database (Virginia) pay for distance on every query.", targets: [{ expr: byPlatform.p95, legend: "{{platform}}" }] }, 12, 1),
-      panel({ title: "Server errors (5xx share)", unit: "percentunit", byPlatform: true, targets: [{ expr: `(${byPlatform.errors}) / (${byPlatform.rate})`, legend: "{{platform}}" }] }, 0, 9),
-      panel({ title: "Client errors (4xx share)", unit: "percentunit", byPlatform: true, description: "404s, 422s, 429s: the caller's mistakes, not the service's.", targets: [{ expr: `(${byPlatform.clientErrors}) / (${byPlatform.rate})`, legend: "{{platform}}" }] }, 12, 9),
+      panel({ title: "Server errors (5xx share)", unit: "percentunit", byPlatform: true, targets: [{ expr: errorShare("$__rate_interval", "platform"), legend: "{{platform}}" }] }, 0, 9),
+      panel({ title: "Client errors (4xx share)", unit: "percentunit", byPlatform: true, description: "404s, 422s, 429s: the caller's mistakes, not the service's.", targets: [{ expr: errorShare("$__rate_interval", "platform", "clientErrors"), legend: "{{platform}}" }] }, 12, 9),
 
       row("Per endpoint", 17),
       panel({ title: "Requests per second, by endpoint", unit: "reqps", targets: [{ expr: byRoute.rate, legend: "{{span_name}}" }] }, 0, 18),
@@ -76,7 +77,14 @@ export function buildDashboard() {
         title: "Endpoints over the selected range", type: "table", unit: "s", w: 24, h: 9,
         description: "p95 per endpoint and platform for the whole time range.",
         targets: [{ expr: overRange.p95, instant: true, format: "table" }],
-        options: { showHeader: true, sortBy: [{ displayName: "Value", desc: true }] },
+        // An instant query's rows carry a timestamp nobody needs here: hide it,
+        // and give the columns names a reader would use.
+        transformations: [{ id: "organize", options: {
+          excludeByName: { Time: true },
+          indexByName: { span_name: 0, platform: 1, Value: 2 },
+          renameByName: { span_name: "Endpoint", platform: "Platform", Value: "p95" },
+        } }],
+        options: { showHeader: true, sortBy: [{ displayName: "p95", desc: true }] },
       }, 0, 26),
 
       row("Database", 35),
