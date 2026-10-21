@@ -18,7 +18,7 @@ export const features: Feature[] = [
   { slug: "request-ids", name: "Request IDs", category: "Logs", phase: 1, ready: true,
     summary: "One id that follows a request across services and platforms." },
 
-  { slug: "traces", name: "Distributed tracing", category: "Traces", phase: 2, ready: false,
+  { slug: "traces", name: "Distributed tracing", category: "Traces", phase: 2, ready: true,
     summary: "Where the time goes: every step of a request as a span." },
 
   { slug: "metrics", name: "RED metrics", category: "Metrics", phase: 3, ready: false,

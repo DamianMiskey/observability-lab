@@ -35,10 +35,12 @@ CI (`.github/workflows/ci.yml`) runs all of them on every pull request, with no 
 - **Fixed lists only**: `/api/send` sends one of three read-only requests (`src/lib/targets.ts`) to one or both copies of the API, with a `traceparent` it generates so it knows the request id; `/api/query` runs one of a few preset LogQL queries (`src/lib/queries.ts`). Visitors can't make the server fetch an arbitrary URL or run arbitrary queries on the account. `/api/find` looks up one 32-hex-character id with a Loki line filter over the last 30 minutes.
 - **Requests come from Washington, D.C.**: the pages ask this site's server (Vercel iad1) to call the API, so the Worker copy also runs near Virginia for these requests and is fast; from a browser in Johannesburg it runs in Johannesburg, an ocean away from the database.
 
+- **Traces** (`/traces`): `/api/trace?id=` reads one trace from Tempo's `/api/v2/traces/<id>` and flattens it (hex or base64 ids, numeric or named kinds and statuses, times relative to the trace's start; `flattenTrace` in `src/lib/grafana.ts`); `Waterfall.tsx` draws it depth-first. The demo sends the request from this site's server or, for the leaderboard (the one endpoint whose CORS allows this site, `traceparent` and `X-Request-Id`), from the visitor's browser, so a far-away visitor sees the Worker's database queries cross the ocean. CSP `connect-src` allows both API origins for that.
+
 ## Roadmap
 
 - [x] **Phase 1: Logs.** Structured JSON log lines and request ids (in the API lab), shipped to Grafana Loki over OTLP; pages that send a request and find its line, ask the logs LogQL questions, and follow one id across both platforms
-- [ ] **Phase 2: Traces.** OpenTelemetry spans for requests, middleware and database queries, on Vercel and Workers, in Grafana Tempo
+- [x] **Phase 2: Traces.** Spans for requests, middleware steps, every database query and webhook deliveries, on Vercel and Workers (a small tracer in the API lab), in Grafana Tempo; a page that sends a request from the server or your browser and draws its trace as a waterfall
 - [ ] **Phase 3: Metrics.** Rate, errors and duration per endpoint, a dashboard, and an error-rate alert
 - [ ] **Phase 4: The browser.** Web vitals and front-end errors from real visitors (Grafana Faro)
 - [ ] **Phase 5: From outside.** Synthetic checks of the live API on a schedule, plus the Playwright suites as traffic

@@ -5,6 +5,7 @@
 // throws NotConfigured and the pages say so.
 
 const LOKI = { url: "https://logs-prod-042.grafana.net", user: "1842184" };
+const TEMPO = { url: "https://tempo-prod-30-prod-us-east-3.grafana.net/tempo", user: "1836485" };
 
 export class NotConfigured extends Error {
   constructor() { super("Grafana isn't configured here (no GRAFANA_READ_TOKEN)."); }
@@ -54,3 +55,76 @@ export async function instant(query: string) {
 
 /** The stream every line of the API lab is in. */
 export const API_STREAM = '{service_name="api-feature-lab"}';
+
+// ---- Traces (Tempo) ---------------------------------------------------------
+
+export type TraceSpan = {
+  spanId: string; parentSpanId: string | null; name: string;
+  kind: "server" | "client" | "internal" | "other";
+  /** Milliseconds from the start of the trace, and how long it took. */
+  startMs: number; durationMs: number;
+  error: string | null;
+  platform: string | null; region: string | null;
+  attributes: Record<string, string | number | boolean>;
+};
+
+type OtlpValue = { stringValue?: string; intValue?: string | number; doubleValue?: number; boolValue?: boolean };
+type OtlpSpan = {
+  spanId: string; parentSpanId?: string; name: string; kind?: number | string;
+  startTimeUnixNano: string; endTimeUnixNano: string;
+  attributes?: { key: string; value: OtlpValue }[];
+  status?: { code?: number | string; message?: string };
+};
+type OtlpTrace = { resourceSpans?: OtlpResourceSpans[]; batches?: OtlpResourceSpans[] };
+type OtlpResourceSpans = { resource?: { attributes?: { key: string; value: OtlpValue }[] }; scopeSpans?: { spans?: OtlpSpan[] }[]; instrumentationLibrarySpans?: { spans?: OtlpSpan[] }[] };
+
+const plain = (v: OtlpValue) => v.stringValue ?? (v.intValue !== undefined ? Number(v.intValue) : v.doubleValue ?? v.boolValue ?? "");
+const attrs = (list: { key: string; value: OtlpValue }[] = []) => Object.fromEntries(list.map((a) => [a.key, plain(a.value)]));
+
+/** Tempo's JSON may give ids as hex or (protobuf style) base64: always hex here. */
+export function hexId(id: string | undefined) {
+  if (!id) return null;
+  if (/^[0-9a-f]+$/i.test(id) && (id.length === 16 || id.length === 32)) return id.toLowerCase();
+  return [...atob(id)].map((ch) => ch.charCodeAt(0).toString(16).padStart(2, "0")).join("");
+}
+
+const KINDS: Record<string, TraceSpan["kind"]> = { "1": "internal", "2": "server", "3": "client", SPAN_KIND_INTERNAL: "internal", SPAN_KIND_SERVER: "server", SPAN_KIND_CLIENT: "client" };
+const isError = (code: number | string | undefined) => code === 2 || code === "STATUS_CODE_ERROR";
+
+/** Flatten Tempo's answer into spans with times relative to the trace's start. */
+export function flattenTrace(trace: OtlpTrace): TraceSpan[] {
+  const raw = (trace.resourceSpans ?? trace.batches ?? []).flatMap((rs) => {
+    const resource = attrs(rs.resource?.attributes);
+    return (rs.scopeSpans ?? rs.instrumentationLibrarySpans ?? []).flatMap((ss) => (ss.spans ?? []).map((sp) => ({ sp, resource })));
+  });
+  if (raw.length === 0) return [];
+  const ns = (v: string) => BigInt(v);
+  const t0 = raw.reduce((min, { sp }) => (ns(sp.startTimeUnixNano) < min ? ns(sp.startTimeUnixNano) : min), ns(raw[0].sp.startTimeUnixNano));
+  const ms = (v: bigint) => Number(v) / 1e6;
+  return raw.map(({ sp, resource }) => ({
+    spanId: hexId(sp.spanId)!,
+    parentSpanId: hexId(sp.parentSpanId),
+    name: sp.name,
+    kind: KINDS[String(sp.kind ?? "")] ?? "other",
+    startMs: ms(ns(sp.startTimeUnixNano) - t0),
+    durationMs: ms(ns(sp.endTimeUnixNano) - ns(sp.startTimeUnixNano)),
+    error: isError(sp.status?.code) ? sp.status?.message ?? "error" : null,
+    platform: (resource["cloud.platform"] as string) ?? null,
+    region: (resource["cloud.region"] as string) ?? null,
+    attributes: attrs(sp.attributes),
+  })).sort((a, b) => a.startMs - b.startMs);
+}
+
+/** One trace by id, or null if Tempo doesn't have it (yet). */
+export async function getTrace(traceId: string): Promise<TraceSpan[] | null> {
+  const res = await fetch(`${TEMPO.url}/api/v2/traces/${traceId}`, {
+    headers: { authorization: auth(TEMPO.user), accept: "application/json" },
+    signal: AbortSignal.timeout(10_000),
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Tempo answered ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const body = (await res.json()) as { trace?: OtlpTrace } & OtlpTrace;
+  const spans = flattenTrace(body.trace ?? body);
+  return spans.length ? spans : null;
+}
