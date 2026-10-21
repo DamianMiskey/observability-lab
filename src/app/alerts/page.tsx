@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CodePeek } from "@/components/CodePeek";
+import { CopyButton } from "@/components/CopyButton";
 import { Demo, FeaturePage } from "@/components/FeaturePage";
 import { ALERT } from "@/lib/metrics";
 import { AlertCheck } from "./AlertCheck";
@@ -46,12 +47,18 @@ export default function AlertsPage() {
       <Demo title="2. An error-rate alert">
         <p className="mt-0 text-sm">
           Fires when more than {ALERT.threshold * 100}% of a platform&apos;s requests are server errors over {ALERT.window}, with
-          at least {ALERT.minRequests} requests. In Grafana: <strong>Alerting → Alert rules → New alert rule</strong>, data
-          source <code>grafanacloud-…-prom</code>, switch the query to <em>Code</em>, paste the rule below, set the condition
-          to the query itself (it returns a series only while firing), evaluate every 1m for 5m, label it{" "}
-          <code>service=api-feature-lab</code>, and send it to your e-mail contact point.
+          at least {ALERT.minRequests} requests. The rule returns a value only while firing, so its condition is &quot;is
+          above 0&quot;, and <strong>no data must count as Normal</strong>.
         </p>
-        <pre className="m-0 mb-3 overflow-x-auto rounded-lg bg-code px-3 py-2 font-mono text-xs" tabIndex={0} data-testid="rule">{ALERT.rule}</pre>
+        <ul className="text-sm">
+          <li><strong>Easiest (works on a phone):</strong> on the imported dashboard, the <em>Alert: server error rate</em> panel&apos;s
+            menu → <strong>More… → New alert rule</strong>. The query arrives filled in.</li>
+          <li><strong>Or by hand:</strong> <strong>Alerting → Alert rules → New alert rule</strong>, data source{" "}
+            <code>grafanacloud-…-prom</code>, query editor in <em>Code</em> mode, paste the rule below.</li>
+          <li>Then: evaluate every 1m with a 5m pending period, label <code>service=api-feature-lab</code>, contact point your e-mail.</li>
+        </ul>
+        <pre className="m-0 mb-2 overflow-x-auto rounded-lg bg-code px-3 py-2 font-mono text-xs" tabIndex={0} data-testid="rule">{ALERT.rule}</pre>
+        <div className="mb-3"><CopyButton text={ALERT.rule} label="Copy the rule" /></div>
         <AlertCheck />
       </Demo>
 

@@ -1,4 +1,4 @@
-import { errorShare, red } from "./metrics";
+import { ALERT, errorShare, red } from "./metrics";
 
 // The API lab's dashboard, as Grafana dashboard JSON, built from the same
 // PromQL the Metrics page runs (src/lib/metrics.ts), so the two can't drift.
@@ -91,9 +91,16 @@ export function buildDashboard() {
       panel({ title: "p95 per query", unit: "s", description: "Client spans named after the statement and table, e.g. SELECT scores.", targets: [{ expr: `histogram_quantile(0.95, sum by (span_name) (rate(traces_spanmetrics_latency{${DB}}[$__rate_interval])))`, legend: "{{span_name}}" }] }, 0, 36),
       panel({ title: "Queries per second", unit: "qps", targets: [{ expr: `sum by (span_name) (rate(traces_spanmetrics_calls_total{${DB}}[$__rate_interval]))`, legend: "{{span_name}}" }] }, 12, 36),
 
-      row("Logs", 44),
+      row("Alerting", 44),
+      panel({
+        title: "Alert: server error rate", unit: "percentunit", w: 24, byPlatform: true,
+        description: `The alert rule's own query: a value appears only while a platform has more than ${ALERT.threshold * 100}% 5xx over ${ALERT.window} with at least ${ALERT.minRequests} requests. To create the rule: this panel's menu → More… → New alert rule (the query arrives filled in), condition "is above 0", no data = Normal.`,
+        targets: [{ expr: ALERT.rule, legend: "{{platform}}" }],
+      }, 0, 45),
+
+      row("Logs", 53),
       {
-        id: ++id, title: "Warnings and errors", type: "logs", datasource: LOKI, gridPos: { x: 0, y: 45, w: 24, h: 10 },
+        id: ++id, title: "Warnings and errors", type: "logs", datasource: LOKI, gridPos: { x: 0, y: 54, w: 24, h: 10 },
         description: "Every 4xx and 5xx request line, newest first. Each has a requestId: paste it into Tempo to open its trace.",
         options: { showTime: true, wrapLogMessage: true, sortOrder: "Descending", enableLogDetails: true },
         targets: [{ refId: "A", datasource: LOKI, expr: '{service_name="api-feature-lab"} | json | level=~"warn|error"' }],

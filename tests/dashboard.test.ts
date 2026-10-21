@@ -55,6 +55,14 @@ describe("dashboard details", () => {
   });
 });
 
+describe("the alert panel", () => {
+  it("carries the alert rule's exact query, so Grafana can create the rule from it", () => {
+    const panel = (buildDashboard().panels as { title: string; targets?: { expr: string }[] }[]).find((p) => p.title === "Alert: server error rate")!;
+    expect(panel.targets![0].expr).toBe(ALERT.rule);
+    expect(ALERT.rule).not.toContain("$__");
+  });
+});
+
 describe("the alert rule", () => {
   it("needs both a high error share and enough requests", () => {
     expect(ALERT.rule).toContain(`> ${ALERT.threshold} and`);
