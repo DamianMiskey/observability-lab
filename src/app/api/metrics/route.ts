@@ -9,13 +9,13 @@ export async function GET(request: Request) {
   try {
     if (q === "red") {
       const [calls, errors, clientErrors, p95] = await Promise.all([RED.calls, RED.errors, RED.clientErrors, RED.p95].map(promInstant));
-      const key = (l: Record<string, string>) => `${l.span_name}|${l.cloud_platform ?? "unknown"}`;
+      const key = (l: Record<string, string>) => `${l.span_name}|${l.platform ?? "unknown"}`;
       const pick = (rows: { labels: Record<string, string>; value: number }[], k: string) => rows.find((r) => key(r.labels) === k)?.value;
       const rows: RedRow[] = calls.filter((c) => c.value > 0).map((c) => {
         const k = key(c.labels);
         const p = pick(p95, k);
         return {
-          route: c.labels.span_name, platform: c.labels.cloud_platform ?? "unknown",
+          route: c.labels.span_name, platform: c.labels.platform ?? "unknown",
           calls: Math.round(c.value), errors: Math.round(pick(errors, k) ?? 0), clientErrors: Math.round(pick(clientErrors, k) ?? 0),
           p95Ms: p !== undefined && Number.isFinite(p) ? Math.round(p * 1000) : null,
         };
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     }
     if (q === "p95") {
       const series = (await promRange(P95_OVER_TIME.query, P95_OVER_TIME.hours, P95_OVER_TIME.stepSec))
-        .map((s) => ({ platform: s.labels.cloud_platform ?? "unknown", points: s.points.filter(([, v]) => Number.isFinite(v)).map(([t, v]) => [t, Math.round(v * 1000)]) }));
+        .map((s) => ({ platform: s.labels.platform ?? "unknown", points: s.points.filter(([, v]) => Number.isFinite(v)).map(([t, v]) => [t, Math.round(v * 1000)]) }));
       return Response.json({ series, query: P95_OVER_TIME.query }, { headers: { "cache-control": "no-store" } });
     }
     if (q === "discover") {
