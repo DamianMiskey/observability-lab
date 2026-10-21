@@ -23,7 +23,7 @@ export const features: Feature[] = [
 
   { slug: "metrics", name: "RED metrics", category: "Metrics", phase: 3, ready: true,
     summary: "Rate, errors and duration for every endpoint." },
-  { slug: "alerts", name: "Dashboards & alerts", category: "Metrics", phase: 3, ready: false,
+  { slug: "alerts", name: "Dashboards & alerts", category: "Metrics", phase: 3, ready: true,
     summary: "Seeing trouble at a glance, and being told about it." },
 
   { slug: "real-users", name: "Real user monitoring", category: "The browser", phase: 4, ready: false,

@@ -72,3 +72,15 @@ test("on the live site, the RED table and the p95 chart show real metrics @deplo
   await expect(page.getByTestId("p95-chart")).toBeVisible({ timeout: 20_000 });
   expect(await overflow(page)).toBeLessThanOrEqual(0);
 });
+
+test("dashboards & alerts: the dashboard downloads, the rule is shown @readonly", async ({ page, request }) => {
+  const res = await request.get("/grafana/api-feature-lab-dashboard.json");
+  expect(res.ok()).toBe(true);
+  expect((await res.json()).title).toBe("API Feature Lab: RED");
+  await page.goto("/alerts");
+  await expect(page.getByTestId("rule")).toContainText("STATUS_CODE_ERROR");
+  await page.getByRole("button", { name: "Would it fire right now?" }).click();
+  if (LIVE) await expect(page.getByTestId("alert-check")).toContainText(/Quiet|Firing/, { timeout: 20_000 });
+  else await expect(page.getByText("Reading from Grafana isn't set up")).toBeVisible();
+  expect(await overflow(page)).toBeLessThanOrEqual(0);
+});
