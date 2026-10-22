@@ -63,6 +63,7 @@ export function Waterfall({ spans }: { spans: TraceSpan[] }) {
               <dl className="m-0 mt-1 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 rounded bg-code px-2 py-1 font-mono text-xs">
                 <dt className="text-muted">duration</dt><dd className="m-0">{ms(s.durationMs)} (from {ms(s.startMs)})</dd>
                 <dt className="text-muted">kind</dt><dd className="m-0">{s.kind}</dd>
+                {s.service && <><dt className="text-muted">service</dt><dd className="m-0">{s.service}</dd></>}
                 {s.platform && <><dt className="text-muted">platform</dt><dd className="m-0">{s.platform}{s.region ? ` · ${s.region}` : ""}</dd></>}
                 {s.error && <><dt className="text-muted">error</dt><dd className="m-0 break-all text-danger">{s.error}</dd></>}
                 {Object.entries(s.attributes).map(([k, v]) => (

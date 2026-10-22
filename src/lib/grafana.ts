@@ -66,6 +66,8 @@ export type TraceSpan = {
   startMs: number; durationMs: number;
   error: string | null;
   platform: string | null; region: string | null;
+  /** Which service sent it: "api-feature-lab", or "motion-lab" for spans from a visitor's browser. */
+  service: string | null;
   attributes: Record<string, string | number | boolean>;
 };
 
@@ -112,6 +114,7 @@ export function flattenTrace(trace: OtlpTrace): TraceSpan[] {
     error: isError(sp.status?.code) ? sp.status?.message ?? "error" : null,
     platform: (resource["cloud.platform"] as string) ?? null,
     region: (resource["cloud.region"] as string) ?? null,
+    service: (resource["service.name"] as string) ?? null,
     attributes: attrs(sp.attributes),
   })).sort((a, b) => a.startMs - b.startMs);
 }
