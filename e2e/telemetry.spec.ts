@@ -84,3 +84,17 @@ test("dashboards & alerts: the dashboard downloads, the rule is shown @readonly"
   else await expect(page.getByText("Reading from Grafana isn't set up")).toBeVisible();
   expect(await overflow(page)).toBeLessThanOrEqual(0);
 });
+
+test("real user monitoring: the three demos load @readonly", async ({ page }) => {
+  await page.goto("/real-users");
+  await page.getByRole("button", { name: "Show the last 24 hours" }).click();
+  await page.getByRole("button", { name: "Show recent errors" }).click();
+  await page.getByRole("button", { name: "Show the latest one" }).click();
+  if (LIVE) {
+    await expect(page.getByTestId("vitals").or(page.getByText(/No visits in the last/))).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("errors")).toBeVisible({ timeout: 30_000 });
+  } else {
+    await expect(page.getByText("Reading from Grafana isn't set up").first()).toBeVisible();
+  }
+  expect(await overflow(page)).toBeLessThanOrEqual(0);
+});
