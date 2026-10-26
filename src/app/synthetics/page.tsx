@@ -32,9 +32,12 @@ export default function SyntheticsPage() {
       <Demo title="2. Where the time goes">
         <PhaseBars />
         <p className="text-sm text-muted">
-          The latest request of each check, split into its phases. From Cape Town, connecting and the TLS handshake each cost a
-          round trip across the Atlantic before the server does any work; from North Virginia they&apos;re almost free. A
-          Cloudflare Worker answers from the city nearest the probe, so its connect time stays small everywhere.
+          The latest request of each check, split into its phases. Connecting and the TLS handshake are quick from both cities:
+          Vercel and Cloudflare both accept connections at an edge server near the visitor, Cape Town included. The distance
+          shows up afterwards, as <strong>server working</strong>: for the Vercel copy, the Cape Town edge forwards the request to
+          the function in Virginia and waits for the answer, so the same request takes several times longer than from North
+          Virginia. A Worker runs in the city that received the request, so a health check (no database) is answered right
+          there. Slow DNS lookups from one probe are usually its own resolver starting cold.
         </p>
       </Demo>
 
