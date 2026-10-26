@@ -34,6 +34,8 @@ const nextConfig: NextConfig = {
   // Cache Components: pages are static shells; live data comes per request.
   cacheComponents: true,
   poweredByHeader: false,
+  // The shared look (@djmiskey/lab-tokens) ships TypeScript source.
+  transpilePackages: ["@djmiskey/lab-tokens"],
   async headers() {
     return [
       { source: "/:path*", headers: [...securityHeaders, { key: "Content-Security-Policy", value: policy }] },
