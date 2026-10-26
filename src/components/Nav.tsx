@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { categories, features } from "@/lib/features";
+import { ThemeSwitch } from "@djmiskey/lab-tokens/ThemeSwitch";
 import { cx } from "./ui";
 
 // The sidebar is a Client Component so it can highlight the current page
@@ -38,7 +39,8 @@ export function Nav() {
           </div>
         );
       })}
-      <a href="https://api.djmiskey.com" className="mt-4 block w-full border-t border-line px-2 pt-3 text-sm">The API being watched ↗</a>
+      <div className="mt-4 w-full border-t border-line px-2 pt-3"><ThemeSwitch /></div>
+      <a href="https://api.djmiskey.com" className="mt-2 block w-full px-2 text-sm">The API being watched ↗</a>
     </nav>
   );
 }
