@@ -29,7 +29,7 @@ export const features: Feature[] = [
   { slug: "real-users", name: "Real user monitoring", category: "The browser", phase: 4, ready: true,
     summary: "Web vitals and errors from visitors' own browsers." },
 
-  { slug: "synthetics", name: "Synthetic checks", category: "From outside", phase: 5, ready: false,
+  { slug: "synthetics", name: "Synthetic checks", category: "From outside", phase: 5, ready: true,
     summary: "Probing the live API on a schedule, from around the world." },
 ];
 
