@@ -98,3 +98,12 @@ test("real user monitoring: the three demos load @readonly", async ({ page }) =>
   }
   expect(await overflow(page)).toBeLessThanOrEqual(0);
 });
+
+test("synthetic checks: both demos load @readonly", async ({ page }) => {
+  await page.goto("/synthetics");
+  await page.getByRole("button", { name: "Show the checks" }).click();
+  await page.getByRole("button", { name: "Show where the time goes" }).click();
+  if (LIVE) await expect(page.getByTestId("checks")).toContainText("api-vercel-health", { timeout: 30_000 });
+  else await expect(page.getByText("Reading from Grafana isn't set up").first()).toBeVisible();
+  expect(await overflow(page)).toBeLessThanOrEqual(0);
+});
